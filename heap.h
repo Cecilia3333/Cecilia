@@ -1,0 +1,30 @@
+#pragma once
+
+#include<stdio.h>
+#include<stdlib.h>
+#include<string.h>
+#include<stddef.h>
+
+#define HeapMaxSize 1024
+typedef char HeapType;
+typedef int(*Compare)(HeapType a,HeapType b);
+
+typedef struct Heap{
+    HeapType data[HeapMaxSize];
+    size_t size;
+    Compare cmp;
+}Heap;
+
+int Greater(HeapType a, HeapType b);
+int Less(HeapType a,HeapType b);
+void HeapInit(Heap* heap,Compare cmp);
+void HeapDestroy(Heap* heap);
+void HeapInsert(Heap* heap,HeapType value);
+void AdjustUp(Heap* heap,size_t index);
+void Swap(HeapType* a,HeapType* b);
+void HeapPrintChar(Heap* heap,const char* msg);
+int HeapRoot(Heap* heap,HeapType* value);
+void HeapErase(Heap* heap);
+void AdjustDown(Heap* heap,size_t index);
+void HeapCreate(Heap* heap,HeapType array[],size_t size);
+void HeapSort(HeapType array[],size_t size);
