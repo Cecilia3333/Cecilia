@@ -1,7 +1,19 @@
-#include"hash.h"
+#include "hash.h"
 
 size_t HashFuncDefault(KeyType key){
     return key % HashMaxSize;
+}
+
+HashElem* CreateElem(KeyType key,ValType value){
+    HashElem* new_node = (HashElem*)malloc(sizeof(HashElem));
+    new_node->key = key;
+    new_node->value = value;
+    new_node->next = NULL;
+    return new_node;
+}
+
+void DestroyElem(HashElem* node){
+    free(node);
 }
 
 void HashInit(HashTable* ht,HashFunc hash_func){
@@ -11,7 +23,7 @@ void HashInit(HashTable* ht,HashFunc hash_func){
     ht->func = hash_func;
     size_t i = 0;
     for(;i < HashMaxSize;++i){
-        ht->data[i].stat = Empty;
+        ht->data[i] = NULL;
     }
     return;
 }
@@ -21,37 +33,58 @@ void HashDestroy(HashTable* ht){
         return;
     ht->size = 0;
     ht->func = NULL;
+    //遍历所有链表，进行释放操作
+    size_t i = 0;
+    for(;i < HashMaxSize;i++){
+        HashElem* cur = ht->data[i];
+        while(cur != NULL){
+            HashElem* next = cur->next;
+            DestroyElem(cur);
+            cur = next;
+        }
+    }
     return;
 }
 
-void HashInsert(HashTable* ht,KeyType key,ValType value){
-    if(ht == NULL)//非法输入
-        return;
-    if(ht->size >= 0.8*HashMaxSize)//判定hash表能否继续插入（根据负载因子判定），这里我们假定负载因子为0.8
-        return;
-    size_t offset = ht->func(key);//根据key计算offset
-    //从offset位置开始线性的往后查找，找到第一个状态为Empty的元素来进行插入
-    while(1){
-        if(ht->data[offset].stat != Valid){
-            //此时找到了一个合适的位置来放置要插入的元素
-            ht->data[offset].stat = Valid;
-            ht->data[offset].key = key;
-            ht->data[offset].value = value;
-            //++size
-            ++ht->size;
-            return;
-        }
-        else if(ht->data[offset].stat == Valid && ht->data[offset].key == key){
-            //hash表中存在了一个key相同的元素，此时我们单纯的认为插入失败
-            return;
-        }
-        else{
-            ++offset;
-            if(offset >= HashMaxSize)
-                offset = 0;
-        }
+HashElem* HashBucketFind(HashElem* head,KeyType to_find){
+    HashElem* cur = head;
+    for(;cur != NULL;cur = cur->next){
+        if(cur->key == to_find)
+            break;
     }
-    //如果发现了key相同的元素，此时认为插入失败
+    return cur;
+}
+
+int HashBucketFindEx(HashElem* head,KeyType to_find,HashElem** pre_node,HashElem** cur_node){
+    HashElem* cur = head;
+    HashElem* pre = NULL;
+    for(;cur != NULL;pre = cur,cur = cur->next){
+        if(cur->key == to_find)
+            break;
+    }
+    if(cur == NULL)
+        return 0;
+    *pre_node = pre;
+    *cur_node = cur;
+    return 1;
+}
+
+void HashInsert(HashTable* ht,KeyType key,ValType value){
+    if(ht == NULL)
+        return;
+    //根据key值计算offset
+    size_t offset = ht->func(key);
+    //在offset对应的链表中查找看当前的key是否存在
+    //若存在，就认为插入失败
+    HashElem* ret = HashBucketFind(ht->data[offset],key);
+    if(ret != NULL)//此时说明存在了重复的key值，认为插入失败
+        return;
+    //若不存在，就使用头插进行插入
+    HashElem* new_node = CreateElem(key,value);
+    new_node->next = ht->data[offset];
+    ht->data[offset] = new_node;
+    //++size
+    ++ht->size;
     return;
 }
 
@@ -59,37 +92,28 @@ void HashPrint(HashTable* ht,const char* msg){
     printf("[%s]\n",msg);
     size_t i = 0;
     for(;i < HashMaxSize;++i){
-        if(ht->data[i].stat == Empty){
+        if(ht->data[i] == NULL)
             continue;
+        printf("i = %lu\n",i);
+        HashElem* cur = ht->data[i];
+        for(;cur != NULL;cur = cur->next){
+            printf("[%d:%d]",cur->key,cur->value);
         }
-        printf("[%lu   %d:%d]  ",i,ht->data[i].key,ht->data[i].value);
+        printf("\n");
     }
-    printf("\n");
 }
 
 int HashFind(HashTable* ht,KeyType key,ValType* value){
     if(ht == NULL || value == NULL)
         return 0;
-    if(ht->size == 0)
+    //根据key计算offset
+    size_t offset = ht->func(key);
+    //找到对应offset的链表，遍历链表尝试找到其中的元素
+    HashElem* ret = HashBucketFind(ht->data[offset],key);
+    if(ret == NULL)
         return 0;
-    size_t offset = ht->func(key);//根据key计算出offset
-    while(1){//从offset开始往后进行查找，每次取得一个元素，使用key进行比较
-        //如果找到了key相同的元素，此时直接把value返回，并且认为查找成功
-        if(ht->data[offset].key == key && ht->data[offset].stat == Valid){
-            //找到了
-            *value = ht->data[offset].value;
-            return 1;
-        }
-        else if(ht->data[offset].stat == Empty)
-            //如果发现当前元素是一个空元素，此时认为查找失败
-            return 0;
-        else{
-            //如果发现当前的key不相同，就继续往后查找
-            ++offset;
-            offset = offset>=HashMaxSize?0:offset;
-        }
-    }
-    return 0;
+    *value = ret->value;
+    return 1;
 }
 
 void HashRemove(HashTable* ht,KeyType key){
@@ -97,24 +121,26 @@ void HashRemove(HashTable* ht,KeyType key){
         return;
     if(ht->size == 0)
         return;
-    size_t offset = ht->func(key);//根据key计算offset
-    //从offset开始，依次判定当前元素的key和要删除元素的key是否相同
-    while(1){
-        //若当前的key就是要删除的key，删除当前元素即可，将要删除元素的状态标记为Deleted
-        if(ht->data[offset].key == key && ht->data[offset].stat == Valid){
-            ht->data[offset].stat = Deleted;
-            --ht->size;
-            return;
-        }
-        //若当前元素为空元素，则key在hash表中没有找到，删除失败，直接返回即可
-        else if(ht->data[offset].stat == Empty)
-            return;
-        else{
-            ++offset;
-            offset = offset>=HashMaxSize?0:offset;
-        }
+    //根据key计算offset
+    size_t offset = ht->func(key);
+    //通过offset找到对应的链表，
+    //在链表中找到指定元素并进行删除
+    HashElem* pre = NULL;
+    HashElem* cur = NULL;
+    int ret = HashBucketFindEx(ht->data[offset],key,&pre,&cur);
+    if(ret == 0)//未找到，删除失败
+        return;
+    if(pre == NULL)//要删除的节点是链表的头结点
+        ht->data[offset] = cur->next;
+    else{
+        //要删除的元素不是链表头节点
+        pre->next = cur->next;
     }
+    DestroyElem(cur);
+    //--size;
+    --ht->size;
     return;
 }
+
 
 
