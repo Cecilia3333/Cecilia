@@ -1,0 +1,54 @@
+<html>
+    <body>
+     <div id="Layer1" style="position:absolute; width:100%; height:100%; z-index:-1">  
+            <img src="imag/cc.jpeg" height="100%" width="100%"/>  
+        </div>
+        <meta charset="utf-8">
+
+        <h1>推算几天后的日期</h1>
+
+        <form action="/cgi/netTime1" method="POST">
+            <br>
+            <input type="text" name="year" value="2018" <h3>年</h3>
+            <input type="text" name="month" value="8"<h3>月</h3>
+            <input type="text" name="day" value="5"<h3>日</h3>
+            <br>
+            <h3>往后</h3>
+            <br>
+            <input type="text" name="days" value="0"<h3>天</h3>
+            <br><br>
+            <input type="submit" value="计算">
+        </form>
+
+        <br><br>
+        <h1>计算两个日期之间相差多少天</h1>
+        <form action="/cgi/netTime2" method="POST">
+            <br>
+            <input type="text" name="year1" value="2018"<h3>年</h3>
+            <input type="text" name="month1" value="8"<h3>月</h3>
+            <input type="text" name="day1" value="5"<h3>日</h3>
+            <br>
+            <h3>距离</h3>
+            <br>
+            <input type="text" name="year2" value="2018"<h3>年</h3>
+            <input type="text" name="month2" value="8"<h3>月</h3>
+            <input type="text" name="day2" value="10"<h3>日</h3>
+            <br><br>
+            <input type="submit" value="计算">
+        </form> 
+        <br><br>
+
+        <h1>四则运算器</h1>
+        <form action="/cgi/netCal" method="POST">
+            First Data:<br>
+            <input type="text" name="x" value="10">
+            <br>
+            Second Data:<br>
+            <input type="text" name="y" value="5">
+            <br><br>
+            <input type="submit" value="计算">
+        </form> 
+        <br><br>
+
+    </body>
+</html>
